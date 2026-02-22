@@ -32,7 +32,7 @@ cd "$REPO_ROOT"
 
 # 1) 下载 GitHub Release 资产（将 URL 替换成你的实际发布地址）
 wget -O open_source_release_20260222_release_ascend_c_onnx_20260222.tar.gz \
-  https://github.com/<owner>/<repo>/releases/download/<tag>/open_source_release_20260222_release_ascend_c_onnx_20260222.tar.gz
+  https://github.com/thb1314/ascend_cv_rotated_op/releases/download/v20260222/open_source_release_20260222_release_ascend_c_onnx_20260222.tar.gz
 
 # 2) 可选：校验下载完整性（SHA256）
 echo "d980f69cc7d7b7d17f07748897e12bba10f2b00399b19bca0e1574aed9741868  open_source_release_20260222_release_ascend_c_onnx_20260222.tar.gz" | sha256sum -c -
