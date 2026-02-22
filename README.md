@@ -1,7 +1,13 @@
-# Open Source Release (No Operator Source)
+> 打个广告：模型部署优化、模型加速（云端、端侧、边缘侧）相关需求欢迎联系 `zhuilewang@163.com` ，支持对公/可开发票  
+> 支持设备：昇腾/海思/瑞芯微/算能/高通/苹果/arm/英伟达/英特尔等，gpu/npu/cpu都可以支持
 
-本包用于开源 **从 `end2end_simp.onnx` 到 `OM` 推理与可视化** 的完整流程。  
-不包含 `op_host/op_kernel/framework` 全量算子源码，但保留了 **算子替换相关源码**（`Where_2`、`Gather_40` 改写脚本）用于复现图改写与精度对齐。  
+
+# two-staged 旋转目标检测模型 在昇腾设备上的部署
+
+开源 two-staged 旋转目标检测模型 **从 `end2end_simp.onnx`、自定义算子、算子替换、`OM`转换 到 OM推理 与 可视化** 的完整流程。  
+
+本项目不包含 `op_host/op_kernel/framework` 全量Ascend C算子源码，但保留了 **算子替换相关源码与Ascend C编译的算子安装包**（`Where_2`、`Gather_40` 改写脚本）用于复现图改写与精度对齐。    
+
 为避免超大文件进入 Git，ONNX 模型文件改为通过 GitHub Release 资产分发。
 
 ## 1. Git 仓库与 Release 资产拆分
@@ -146,6 +152,35 @@ bash run_verify_310b4.sh
 3. 跑 OM、补跑/复用 ORT、产出指标与可视化  
 `standalone_end2end_simp_runner/workflows/end2end_fullgraph_om_vis/run_compare_and_visualize.sh`  
 `standalone_end2end_simp_runner/scripts/fill_ort_vis_and_benchmark.py`
+
+### 7.1 算子替换具体做了什么（Where_2 / Gather_40）
+
+在 `prepare_fullgraph_onnx.py` 中，默认会执行两类 ONNX 图改写（`--enable-where2-maskarith`、`--enable-gather40-slice` 默认开启），目标是提升 ATC/OM 兼容性并保持数值等价：
+
+1. `Where_2` -> `Cast + Mul + Sub`（脚本：`tools/patch_where2_maskarith.py`）
+   - 目标节点：默认 `/Where_2`
+   - 约束：`else` 分支来自 `Add(then_x, pi2_const)`
+   - 替换：
+     - `mask_f32 = Cast(cond, FLOAT)`
+     - `mask_pi2 = Mul(mask_f32, pi2_const)`
+     - `out = Sub(else_y, mask_pi2)`
+   - 等价性：
+     - `cond=1` 时：`out = then_x`
+     - `cond=0` 时：`out = then_x + pi2_const (= else_y)`
+
+2. `Gather_40` -> `Slice + Squeeze`（脚本：`tools/patch_gather40_to_slice_squeeze.py`）
+   - 目标节点：默认 `/Gather_40`
+   - 约束：`Gather` 必须是 `axis=1` 且索引是标量 `-1`
+   - 替换：
+     - `Slice(data, starts=[4], ends=[5], axes=[1], steps=[1])`
+     - `Squeeze(axes=[1])`
+   - 含义：等价于“取第 2 维最后一列”。
+
+3. 产物命名（便于排查）
+   - 基础模型：`npu_full.atc_ready_full.onnx`
+   - 应用 Where 改写后：`npu_full.atc_ready_full.where2_maskarith.onnx`
+   - 再应用 Gather 改写后：`npu_full.atc_ready_full.where2_maskarith.gather40_slice.onnx`
+   - 全步骤清单：`fullgraph_prepare_manifest.json`
 
 脚本参数总览见：
 - `standalone_end2end_simp_runner/README_SCRIPT_ARGS.md`
