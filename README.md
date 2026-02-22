@@ -153,9 +153,27 @@ bash run_verify_310b4.sh
 `standalone_end2end_simp_runner/workflows/end2end_fullgraph_om_vis/run_compare_and_visualize.sh`  
 `standalone_end2end_simp_runner/scripts/fill_ort_vis_and_benchmark.py`
 
-### 7.1 算子替换具体做了什么（Where_2 / Gather_40）
+### 7.1 `atc_ready_full` 的 6 类主算子替换
 
-在 `prepare_fullgraph_onnx.py` 中，默认会执行两类 ONNX 图改写（`--enable-where2-maskarith`、`--enable-gather40-slice` 默认开启），目标是提升 ATC/OM 兼容性并保持数值等价：
+`prepare_fullgraph_onnx.py` 会先调用 `scripts/patch_end2end_simp_pipeline.py --pipeline atc_ready_full`，核心主替换如下：
+
+1. `MMCVMultiLevelRoiAlign` -> `NPUMMCVMultiLevelRoiAlign`
+2. `MMCVMultiLevelRotatedRoiAlign` -> `NPUMMCVMultiLevelRotatedRoiAlign`
+3. `GridPriorsTRT` -> `GridPriorsNPU`
+4. `TRTBatchedRotatedNMS` -> `NPUBatchedRotatedNMS`
+5. `TopK` -> `AscendTopK`
+   - 限制：当前仅替换 `axis=0` 的 `TopK`
+   - `k/largest/sorted` 会转成 `AscendTopK` 的显式属性
+6. `NonMaxSuppression`（默认节点名 `/NonMaxSuppression`） -> `NPUNonMaxSuppressionOrt`
+   - 会从原 NMS 输入中提取 `max_output_boxes_per_class/iou_threshold/score_threshold` 并写入新节点属性
+
+说明：
+- 在 NMS 替换后，脚本还会做一个配套图修复：将特定 `Squeeze` 改为 `Reshape`，用于稳定 NMS 后续 shape 链路（不属于新增算子类型，但属于必要图修复）。
+- `atc_ready_full` 同时会做若干 ATC 兼容处理（如 `Reduce*` 自动补 `axes`、部分 shape/value_info 修正），这些属于图修补，不计入“6 类主算子替换”。
+
+### 7.2 额外图改写（Where_2 / Gather_40）
+
+在 `prepare_fullgraph_onnx.py` 中，默认还会执行两类额外改写（`--enable-where2-maskarith`、`--enable-gather40-slice` 默认开启），目标是提升 ATC/OM 兼容性并保持数值等价：
 
 1. `Where_2` -> `Cast + Mul + Sub`（脚本：`tools/patch_where2_maskarith.py`）
    - 目标节点：默认 `/Where_2`
