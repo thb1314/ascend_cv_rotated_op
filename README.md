@@ -297,3 +297,7 @@ bash run_verify_310b4.sh
 - 端到端报告（误差、性能、路径）位于 workflow 输出目录下的 JSON。
 - 每张图片会生成可视化对比图（`vis_side_by_side.jpg`）。
 - 若仅重跑 OM，可复用已有 ORT 中间结果以缩短时间。
+
+### 10.1 效果图示例
+
+![OM vs ORT side-by-side](standalone_end2end_simp_runner/assets/vis_side_by_side.jpg)
