@@ -8,7 +8,7 @@
 ## 1. 目录结构
 
 - `prepare_fullgraph_onnx.py`
-  - 作用：从 `end2end_simp.onnx` 生成 `atc_ready_full`，并按需要做算子替换（`Where_2`、`Gather_40`）。
+  - 作用：从 `end2end_simp.onnx` 生成 `atc_ready_full`，并按需要做算子替换（`Where_2`、`Gather`）。
   - 默认会启用 `--decompose-npu-layernorm`，减少对 `NPULayerNorm` 自定义算子的依赖。
 - `build_full_om_in_screen.sh`
   - 作用：生成 `atc` 命令脚本，并通过 `tools/run_atc_in_screen.sh` 在 `screen` 后台编译 `OM`。

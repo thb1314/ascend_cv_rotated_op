@@ -6,7 +6,7 @@
 
 开源 two-staged 旋转目标检测模型 **从 `end2end_simp.onnx`、自定义算子、算子替换、`OM`转换 到 OM推理 与 可视化** 的完整流程。  
 
-本项目不包含 `op_host/op_kernel/framework` 全量Ascend C算子源码，但保留了 **算子替换相关源码与Ascend C编译的算子安装包**（`Where_2`、`Gather_40` 改写脚本）用于复现图改写与精度对齐。    
+本项目不包含 `op_host/op_kernel/framework` 全量Ascend C算子源码，但保留了 **算子替换相关源码与Ascend C编译的算子安装包**（`Where_2`、`Gather` 改写脚本）用于复现图改写与精度对齐。    
 
 为避免超大文件进入 Git，ONNX 模型文件改为通过 GitHub Release 资产分发。
 
@@ -216,7 +216,7 @@ bash run_verify_310b4.sh
 - 在 NMS 替换后，脚本还会做一个配套图修复：将特定 `Squeeze` 改为 `Reshape`，用于稳定 NMS 后续 shape 链路（不属于新增算子类型，但属于必要图修复）。
 - `atc_ready_full` 同时会做若干 ATC 兼容处理（如 `Reduce*` 自动补 `axes`、部分 shape/value_info 修正），这些属于图修补，不计入“6 类主算子替换”。
 
-### 7.2 额外图改写（Where_2 / Gather_40）
+### 7.2 额外图改写（Where_2 / Gather）
 
 在 `prepare_fullgraph_onnx.py` 中，默认还会执行两类额外改写（`--enable-where2-maskarith`、`--enable-gather40-slice` 默认开启），目标是提升 ATC/OM 兼容性并保持数值等价：
 
@@ -233,7 +233,7 @@ bash run_verify_310b4.sh
 
 2. `Gather` -> `Slice + Squeeze`（脚本：`tools/patch_gather40_to_slice_squeeze.py`）
    - 默认目标：按条件自动匹配 `Gather`（`axis=1`、索引为标量 `-1`、输入最后一维 `=5`）
-   - 可选：也可通过 `--gather-name /Gather_40` 显式指定节点
+   - 可选：也可通过 `--gather-name <gather节点名>` 显式指定节点
    - 替换：
      - `Slice(data, starts=[4], ends=[5], axes=[1], steps=[1])`
      - `Squeeze(axes=[1])`
@@ -331,7 +331,7 @@ bash run_verify_310b4.sh
 | `standalone_end2end_simp_runner/workflows/end2end_fullgraph_om_vis/` | 全流程编排脚本与步骤说明。 |
 | `standalone_end2end_simp_runner/README_SCRIPT_ARGS.md` | 各脚本参数说明（环境变量 + CLI 参数）。 |
 | `standalone_end2end_simp_runner/tools/patch_where2_maskarith.py` | `/Where_2` 替换源码（mask 算术子图）。 |
-| `standalone_end2end_simp_runner/tools/patch_gather40_to_slice_squeeze.py` | `/Gather_40` 替换源码（`Slice+Squeeze`）。 |
+| `standalone_end2end_simp_runner/tools/patch_gather40_to_slice_squeeze.py` | `Gather` 替换源码（`Slice+Squeeze`）。 |
 | `standalone_end2end_simp_runner/scripts/common_vis_utils.py` | 公共预处理与可视化函数（最小依赖实现）。 |
 | `standalone_end2end_simp_runner/onnxruntime_mmrotate_ops/build/libonnxruntime_mmrotate_ops.so` | ORT 自定义算子插件。 |
 | `standalone_end2end_simp_runner/onnxruntime-linux-aarch64-1.11.0/lib/` | ORT 运行库（可直接打包使用）。 |
