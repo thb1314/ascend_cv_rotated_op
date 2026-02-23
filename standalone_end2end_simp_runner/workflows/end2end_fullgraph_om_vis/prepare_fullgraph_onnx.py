@@ -29,7 +29,11 @@ def main() -> int:
     ap.add_argument("--where-name", default="/Where_2")
     ap.add_argument("--pi2-name", default="", help="Optional constant initializer for where->maskarith rewrite.")
     ap.add_argument("--enable-gather40-slice", action=argparse.BooleanOptionalAction, default=True)
-    ap.add_argument("--gather-name", default="/Gather_40")
+    ap.add_argument(
+        "--gather-name",
+        default="",
+        help="Optional explicit Gather node name. If empty, auto-find target Gather by condition.",
+    )
     ap.add_argument(
         "--decompose-npu-layernorm",
         action=argparse.BooleanOptionalAction,
@@ -93,8 +97,7 @@ def main() -> int:
                 str(current),
                 "--out-onnx",
                 str(out2),
-                "--gather-name",
-                str(args.gather_name),
+                *([] if not str(args.gather_name).strip() else ["--gather-name", str(args.gather_name).strip()]),
             ]
         )
         steps.append({"step": "gather40_slice_squeeze", "in": str(current), "out": str(out2)})
