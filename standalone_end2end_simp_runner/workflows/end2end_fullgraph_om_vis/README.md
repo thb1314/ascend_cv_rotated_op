@@ -30,10 +30,11 @@
 脚本：`tools/patch_where2_maskarith.py`  
 目的：避免 `Where` 在该子图上的实现/精度行为不稳定，改成等价算术形式，减少后端不确定性。
 
-### 2.3 `/Gather_40` 替换（`Gather(-1) -> Slice(4:5)+Squeeze`）
+### 2.3 `Gather` 替换（`Gather(axis=1,-1,last_dim=5) -> Slice+Squeeze`）
 
 脚本：`tools/patch_gather40_to_slice_squeeze.py`  
-目的：规避 `Gather(axis=1, index=-1)` 在 NPU 上触发的 `te_gatherv2` 运行异常风险（历史上出现过 `507011`）。
+默认自动匹配条件：`axis=1`、索引为标量 `-1`、输入最后一维 `=5`；也支持显式 `--gather-name`。  
+目的：规避该模式 `Gather` 在 NPU 上触发 `te_gatherv2` 运行异常风险（历史上出现过 `507011`）。
 
 ### 2.4 为什么 `ATC` 用 `screen`
 

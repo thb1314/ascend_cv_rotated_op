@@ -108,6 +108,25 @@ bash run_verify_310b4.sh
 `standalone_end2end_simp_runner/workflows/end2end_fullgraph_om_vis/run_compare_and_visualize.sh`  
 `standalone_end2end_simp_runner/scripts/fill_ort_vis_and_benchmark.py`
 
+### 5.1 额外图改写（Where_2 / Gather_40）
+
+`prepare_fullgraph_onnx.py` 默认会在 `atc_ready_full` 基础上继续执行两步图改写（可通过开关关闭）：
+
+1. `Where_2` -> `Cast + Mul + Sub`（`tools/patch_where2_maskarith.py`）
+   - 默认目标节点：`/Where_2`
+   - 目的：将条件分支改为等价算术表达，减少后端在该分支上的实现差异带来的不稳定性。
+
+2. `Gather` -> `Slice + Squeeze`（`tools/patch_gather40_to_slice_squeeze.py`）
+   - 默认自动匹配条件：`axis=1`、索引为标量 `-1`、输入最后一维 `=5`
+   - 可选显式指定：`--gather-name /Gather_40`
+   - 目的：规避该模式 `Gather` 在部分 NPU 路径上的运行异常风险（历史出现过 `te_gatherv2` 报错）。
+
+典型中间文件：
+- `npu_full.atc_ready_full.onnx`
+- `npu_full.atc_ready_full.where2_maskarith.onnx`
+- `npu_full.atc_ready_full.where2_maskarith.gather40_slice.onnx`
+- `fullgraph_prepare_manifest.json`
+
 脚本参数总览见：
 - `standalone_end2end_simp_runner/README_SCRIPT_ARGS.md`
 

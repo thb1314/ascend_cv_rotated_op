@@ -163,8 +163,8 @@
 | `--enable-where2-maskarith / --no-enable-where2-maskarith` | `True` | 是否替换 `Where_2`。 |
 | `--where-name` | `/Where_2` | 目标 Where 节点名。 |
 | `--pi2-name` | 空 | 手动指定 `mask*const` 常量名。 |
-| `--enable-gather40-slice / --no-enable-gather40-slice` | `True` | 是否替换 `Gather_40`。 |
-| `--gather-name` | `/Gather_40` | 目标 Gather 节点名。 |
+| `--enable-gather40-slice / --no-enable-gather40-slice` | `True` | 是否执行 Gather->Slice+Squeeze 替换。 |
+| `--gather-name` | 空 | 显式目标 Gather 节点名；为空时按条件自动匹配。 |
 | `--decompose-npu-layernorm / --no-decompose-npu-layernorm` | `True` | 是否分解 `NPULayerNorm`。 |
 
 ### 3.2 `scripts/patch_end2end_simp_pipeline.py`
@@ -208,13 +208,16 @@
 
 ### 3.4 `tools/patch_gather40_to_slice_squeeze.py`
 
-用途：把 `Gather(axis=1,index=-1)` 改写为 `Slice(4:5)+Squeeze`。
+用途：把目标 `Gather` 改写为 `Slice+Squeeze`（默认匹配 `axis=1`、索引标量 `-1`、输入最后一维 `=5`）。
 
 | 参数 | 默认值 | 说明 |
 |---|---|---|
 | `--in-onnx` | 必填 | 输入 ONNX。 |
 | `--out-onnx` | 必填 | 输出 ONNX。 |
-| `--gather-name` | `/Gather_40` | 目标 Gather 节点名。 |
+| `--gather-name` | 空 | 显式目标 Gather 节点名；为空时按 `target-*` 条件自动匹配。 |
+| `--target-axis` | `1` | 自动匹配时的 Gather `axis` 条件。 |
+| `--target-index` | `-1` | 自动匹配时的 Gather 索引（标量）条件。 |
+| `--target-last-dim` | `5` | 自动匹配时输入最后一维大小条件。 |
 
 ### 3.5 `scripts/run_om_only_with_cached_ort.py`
 
